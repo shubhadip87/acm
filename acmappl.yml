@@ -1,0 +1,62 @@
+apiVersion: v1
+kind: Service
+metadata:
+    namespace: acmmysql
+    name: acmappl
+    labels:
+       app: acmappl
+spec:
+    ports:
+    - port: 3306
+      name: acmappl
+    clusterIP: None
+    selector:
+       app: acmappl
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+    namespace: acmmysql
+    name: acmappl
+spec:
+  selector:
+    matchLabels:
+      app: acmappl
+  serviceName: "acmappl"
+  podManagementPolicy: Parallel
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: acmappl
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+      - name: acmappl
+        image: mysql:5.7
+        args:
+          - "--ignore-db-dir=lost+found"
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          value: pass123
+        - name: MYSQL_DATABASE
+          value: devmysqldb
+        - name: MYSQL_USER
+          value: admin
+        - name: MYSQL_PASSWORD
+          value: secret
+        ports:
+        - containerPort: 3306
+          name: mysql
+        volumeMounts:
+        - name: dev-vol
+          mountPath: /var/lib/mysql
+  volumeClaimTemplates:
+  - metadata:
+      name: dev-vol
+    spec:
+      storageClassName: sc-vsp5200
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 200Gi
